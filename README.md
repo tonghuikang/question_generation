@@ -38,6 +38,71 @@ Next time you login
 - Python2 or Python3? This may be one reason that you your script does not work.
 - `The container name ... is already in use by container ... `? Run `sudo docker start ...` instead 
 
+## My understanding of the approach
+Overview: The sentence is parsed into a suitable format and is "translated" into a question.
+
+#### CoreNLP
+CoreNLP returns such a json object:
+```
+{'sentences': [{'index': 0,
+                'parse': 'SENTENCE_SKIPPED_OR_UNPARSABLE',  # not sure what this meant
+                'tokens': [{'after': ' ',                   # ???
+                            'before': '',                   # ??? 
+                            'characterOffsetBegin': 0,      # starting character
+                            'characterOffsetEnd': 9,        # ending character, inclusive
+                            'index': 1,                     # token number, starts with one
+                            'lemma': 'Singapore',           # root word
+                            'ner': 'LOCATION',              # entity detected
+                            'originalText': 'Singapore',    # 
+                            'pos': 'NNP',                   # proper noun
+                            'word': 'Singapore'},           # ?
+                           {'after': ' ',                   # 
+                            'before': ' ',                  #
+                            'characterOffsetBegin': 10,     #
+                            'characterOffsetEnd': 13,       #
+                            'index': 2,                     #
+                            'lemma': 'be',                  #
+                            'ner': 'O',                     # no entity detected
+                            'originalText': 'was',          # root word
+                            'pos': 'VBD',                   # verb past tense
+                            'word': 'was'},                 # 
+                            ...
+```
+
+#### Conversion into `opennmt` format
+`convert_text_to_opennmt_format.py` translates the CoreNLP into a form suitable for training: 
+```
+singapore￨B￨UP￨NNP￨LOCATION was￨O￨LOW￨VBD￨O declared￨O￨LOW￨VBN￨O independent￨O￨LOW￨JJ￨O on￨O￨LOW￨IN￨O 9￨O￨LOW￨CD￨DATE august￨O￨UP￨NNP￨DATE 1965￨O￨LOW￨CD￨DATE .￨O￨LOW￨.￨O
+singapore￨O￨UP￨NNP￨LOCATION was￨O￨LOW￨VBD￨O declared￨O￨LOW￨VBN￨O independent￨O￨LOW￨JJ￨O on￨O￨LOW￨IN￨O 9￨B￨LOW￨CD￨DATE august￨I￨UP￨NNP￨DATE 1965￨I￨LOW￨CD￨DATE .￨O￨LOW￨.￨O
+```
+One line is generated for one possibble answer. In the above sentence there are two answers - `singapore` and `9 august 1965`.
+
+The five elements refer to (in order):
+```
+token: word in lowercase
+ans_tag: answer tag, B is for the first word/token, I for the subsequent tokens
+case_tag: was it capitalised?
+pos_tag: part-of-speech
+ner: entity tag, for those in data/ner_features
+```
+The above result is passed into opennmt. Probably in the docker there is some additional custom processing.
+
+#### `opennmt` output
+This is the output from opennmt:
+```
+[[{'attn': (an mxn array),                 # not sure how the dimensions is derived
+   'n_best': 1,                            # ?
+   'pred_score': -4.4853830337524,         # "some score on the confidence of the translation?"
+   'src': 'singapore￨B￨UP￨NNP￨LOCATION was￨O￨LOW￨VBD￨O declared￨O￨LOW￨VBN￨O '
+          'independent￨O￨LOW￨JJ￨O on￨O￨LOW￨IN￨O 9￨O￨LOW￨CD￨DATE '
+          'august￨O￨UP￨NNP￨DATE 1965￨O￨LOW￨CD￨DATE .￨O￨LOW￨.￨O',
+   'tgt': 'who was declared independent on august august ?'   # result of the "translation"
+   }],
+   ...
+```
+
+The answer is re-extracted from `src`, the question is obtained from `tgt` and score is obtained from `pred_score`.
+
 # Description
 
 It is a question-generator model. It takes text and an answer as input
