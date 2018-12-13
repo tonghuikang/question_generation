@@ -1,3 +1,35 @@
+# Implementation comments from huikang
+
+Following the full instructuions I could run this on Ubuntu on Google Cloud Platform.
+
+## Addtional steps
+
+Install docker
+`sudo curl -sSL https://get.docker.com/ | sh`
+
+#### To generate texts on demand
+
+After successfully `./setup` please add your text into `input.txt`. 
+
+Then start the server:
+```
+docker run -d --name corenlp -p 9000:9000 sld3/corenlp:3.6.0
+opennmt_run_cmd="cd /root/opennmt && th tools/translation_server.lua \
+  -host 0.0.0.0 -port 5556  -model /root/data/model.t7 -beam_size 12"
+docker run -d --name opennmt -it -p 5556:5556 -v $(pwd)/data:/root/data sld3/opennmt:780979ab_distro20e52377 bash -c "$opennmt_run_cmd"
+```
+
+Process your input
+```
+P=$(<input.txt)
+./get_qnas "$P"
+```
+
+#### Potential issues
+
+- Python2 or Python3? This may be one reason that you your script does not work.
+- Is `sudo` needed in `pip install ...` or `pip3 install ...`?
+
 # Description
 
 It is a question-generator model. It takes text and an answer as input
