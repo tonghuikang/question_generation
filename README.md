@@ -9,14 +9,18 @@ Install docker
 
 #### To generate texts on demand
 
-After successfully `./setup` please add your text into `input.txt`. 
-
-Then start the server:
+After successfully `sudo ./setup`, reinitialise the docker: 
 ```
-docker run -d --name corenlp -p 9000:9000 sld3/corenlp:3.6.0
+sudo docker run -d --name corenlp -p 9000:9000 sld3/corenlp:3.6.0
 opennmt_run_cmd="cd /root/opennmt && th tools/translation_server.lua \
   -host 0.0.0.0 -port 5556  -model /root/data/model.t7 -beam_size 12"
-docker run -d --name opennmt -it -p 5556:5556 -v $(pwd)/data:/root/data sld3/opennmt:780979ab_distro20e52377 bash -c "$opennmt_run_cmd"
+sudo docker run -d --name opennmt -it -p 5556:5556 -v $(pwd)/data:/root/data sld3/opennmt:780979ab_distro20e52377 bash -c "$opennmt_run_cmd"
+```
+
+If the docker is already reinitalised,
+```
+sudo docker start corenlp
+sudo docker start opennmt
 ```
 
 Process your input
@@ -25,10 +29,14 @@ P=$(<input.txt)
 ./get_qnas "$P"
 ```
 
+Next time you login
+
 #### Potential issues
 
-- Python2 or Python3? This may be one reason that you your script does not work.
+- Permission denied? `sudo ...`
 - Is `sudo` needed in `pip install ...` or `pip3 install ...`?
+- Python2 or Python3? This may be one reason that you your script does not work.
+- `The container name ... is already in use by container ... `? Run `sudo docker start ...` instead 
 
 # Description
 
